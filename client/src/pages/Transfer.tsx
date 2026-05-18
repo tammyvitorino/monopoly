@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { getPlayer, getSession, makeTransfer } from '../api';
 
 interface Player {
@@ -14,9 +14,10 @@ interface Player {
 export default function Transfer() {
   const { playerId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [player, setPlayer] = useState<Player | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayer, setSelectedPlayer] = useState<string>('');
+  const [selectedPlayer, setSelectedPlayer] = useState<string>(searchParams.get('to') || '');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');

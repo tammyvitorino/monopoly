@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPlayer, getSession } from '../api';
 import { QRCodeSVG } from 'qrcode.react';
+import QRScanner from '../components/QRScanner';
 
 interface PlayerData {
   id: string;
@@ -28,6 +29,7 @@ export default function Wallet() {
   const [player, setPlayer] = useState<PlayerData | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showQR, setShowQR] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [sessionCode, setSessionCode] = useState('');
 
   useEffect(() => {
@@ -67,14 +69,27 @@ export default function Wallet() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
         <button className="btn-green" onClick={() => navigate(`/transfer/${playerId}`)}>
           💸 Transferir
+        </button>
+        <button className="btn-secondary" onClick={() => setShowScanner(true)}>
+          📷 Escanear
         </button>
         <button className="btn-secondary" onClick={() => setShowQR(!showQR)}>
           📱 Meu QR
         </button>
       </div>
+
+      {showScanner && (
+        <QRScanner
+          onScan={(data) => {
+            setShowScanner(false);
+            navigate(`/transfer/${playerId}?to=${data}`);
+          }}
+          onClose={() => setShowScanner(false)}
+        />
+      )}
 
       {showQR && (
         <div className="card">
