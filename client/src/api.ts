@@ -51,3 +51,16 @@ export async function getTransactions(sessionId: string) {
   const res = await fetch(`${API}/api/transactions/session/${sessionId}`);
   return res.json();
 }
+
+export async function bankPay(requestedBy: string, sessionId: string, amount: number, toAll: boolean, description?: string) {
+  const res = await fetch(`${API}/api/transactions/bank-pay`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ requestedBy, sessionId, amount, toAll, description })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error);
+  }
+  return res.json();
+}

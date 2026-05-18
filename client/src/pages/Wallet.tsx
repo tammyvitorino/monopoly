@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getPlayer, getSession } from '../api';
 import { QRCodeSVG } from 'qrcode.react';
 import QRScanner from '../components/QRScanner';
+import BankPay from '../components/BankPay';
+import { io as socketIO } from 'socket.io-client';
 
 interface PlayerData {
   id: string;
@@ -30,6 +32,8 @@ export default function Wallet() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showQR, setShowQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showBankPay, setShowBankPay] = useState(false);
+  const [notification, setNotification] = useState('');
   const [sessionCode, setSessionCode] = useState('');
 
   useEffect(() => {
@@ -46,6 +50,20 @@ export default function Wallet() {
     return () => clearInterval(interval);
   }, [playerId]);
 
+  // Socket.IO para notificações do banco
+  useEffect(() => {
+    if (!sessionCode) return;
+    const API_URL = import.meta.env.VITE_API_URL || '';
+    const socket = socketIO(API_URL || window.location.origin);
+    socket.on('connect', () => {
+      socket.emit('join-session', sessionCode);
+    });
+    socket.on('bank-notification', (data: { message: string }) => {
+      setNotification(data.message);
+    });
+    return () => { socket.disconnect(); };
+  }, [sessionCode]);
+
   if (!player) return <div style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</div>;
 
   const formatMoney = (value: number) => {
@@ -59,6 +77,20 @@ export default function Wallet() {
         <h1>Minha Carteira</h1>
       </div>
 
+      {notification && (
+        <div
+          onClick={() => setNotification('')}
+          style={{
+            background: 'var(--primary)', color: 'white', padding: '1rem',
+            borderRadius: '8px', marginBottom: '1rem', textAlign: 'center',
+            fontWeight: 'bold', cursor: 'pointer'
+          }}
+        >
+          {notification}
+          <div style={{ fontSize: '0.7rem', marginTop: '0.25rem', opacity: 0.8 }}>toque para fechar</div>
+        </div>
+      )}
+
       <div className="card" style={{ textAlign: 'center' }}>
         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>{player.avatar}</div>
         <h2>{player.name}</h2>
@@ -69,17 +101,29 @@ export default function Wallet() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
         <button className="btn-green" onClick={() => navigate(`/transfer/${playerId}`)}>
           💸 Transferir
         </button>
+        <button className="btn-secondary" onClick={() => setShowBankPay(true)}>
+          🏦 Receber do Banco
+        </button>
         <button className="btn-secondary" onClick={() => setShowScanner(true)}>
-          📷 Escanear
+          📷 Escanear QR
         </button>
         <button className="btn-secondary" onClick={() => setShowQR(!showQR)}>
           📱 Meu QR
         </button>
       </div>
+
+      {showBankPay && (
+        <BankPay
+          playerId={playerId!}
+          sessionId={player.session_id}
+          onClose={() => setShowBankPay(false)}
+          onSuccess={() => {}}
+        />
+      )}
 
       {showScanner && (
         <QRScanner

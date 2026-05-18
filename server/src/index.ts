@@ -6,7 +6,7 @@ import path from 'path';
 import { initDatabase } from './database';
 import { sessionRouter } from './routes/sessions';
 import { playerRouter } from './routes/players';
-import { transactionRouter } from './routes/transactions';
+import { transactionRouter, setTransactionIO } from './routes/transactions';
 import { setupSocket } from './socket';
 
 const app = express();
@@ -14,6 +14,7 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' }
 });
+setTransactionIO(io);
 
 app.use(cors());
 app.use(express.json());
