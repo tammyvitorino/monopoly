@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: monopoly-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: ./server
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/index.js
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: PORT
+        value: 3006
+      - key: NODE_ENV
+        value: production

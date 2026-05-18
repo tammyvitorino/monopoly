@@ -1,4 +1,4 @@
-const API = '';
+const API = import.meta.env.VITE_API_URL || '';
 
 export async function createSession(name: string, initialBalance: number) {
   const res = await fetch(`${API}/api/sessions`, {
