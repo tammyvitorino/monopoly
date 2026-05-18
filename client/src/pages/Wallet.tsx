@@ -47,7 +47,7 @@ export default function Wallet() {
   if (!player) return <div style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</div>;
 
   const formatMoney = (value: number) => {
-    return `M$ ${(value / 100).toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`;
+    return `M$ ${value.toLocaleString('pt-BR')}`;
   };
 
   return (
