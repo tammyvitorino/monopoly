@@ -66,3 +66,30 @@ sessionRouter.get('/:id', async (req: Request, res: Response) => {
   );
   res.json({ session: sessions[0], players });
 });
+
+// Finalizar sessão
+sessionRouter.post('/:id/end', async (req: Request, res: Response) => {
+  const { winnerId } = req.body;
+  const sessionId = req.params.id;
+
+  const [rows] = await pool.execute('SELECT * FROM sessions WHERE id = ?', [sessionId]);
+  const session = (rows as any[])[0];
+  if (!session) {
+    res.status(404).json({ error: 'Sessão não encontrada' });
+    return;
+  }
+
+  await pool.execute(
+    'UPDATE sessions SET status = ?, winner_id = ? WHERE id = ?',
+    ['finished', winnerId || null, sessionId]
+  );
+
+  // Get winner info
+  let winner = null;
+  if (winnerId) {
+    const [winnerRows] = await pool.execute('SELECT id, name, avatar, balance FROM players WHERE id = ?', [winnerId]);
+    winner = (winnerRows as any[])[0];
+  }
+
+  res.json({ success: true, winner });
+});

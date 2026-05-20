@@ -23,7 +23,8 @@ export async function initDatabase() {
         name VARCHAR(100) NOT NULL,
         initial_balance BIGINT NOT NULL DEFAULT 15000000,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(20) DEFAULT 'active'
+        status VARCHAR(20) DEFAULT 'active',
+        winner_id VARCHAR(21) DEFAULT NULL
       )
     `);
 
@@ -54,6 +55,14 @@ export async function initDatabase() {
         FOREIGN KEY (to_player_id) REFERENCES players(id)
       )
     `);
+
+    // Migration: add winner_id if not exists
+    try {
+      await conn.query(`ALTER TABLE sessions ADD COLUMN winner_id VARCHAR(21) DEFAULT NULL`);
+    } catch (e: any) {
+      // Column already exists, ignore
+      if (e.errno !== 1060) throw e;
+    }
 
     console.log('✅ Banco de dados inicializado');
   } finally {

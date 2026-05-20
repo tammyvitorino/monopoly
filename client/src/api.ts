@@ -64,3 +64,16 @@ export async function bankPay(requestedBy: string, sessionId: string, amount: nu
   }
   return res.json();
 }
+
+export async function endSession(sessionId: string, winnerId?: string) {
+  const res = await fetch(`${API}/api/sessions/${sessionId}/end`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ winnerId })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error);
+  }
+  return res.json();
+}

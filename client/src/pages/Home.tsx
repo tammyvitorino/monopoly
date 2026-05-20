@@ -1,8 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createSession, joinSession, addPlayer } from '../api';
+import { createSession, joinSession, addPlayer, getPlayer } from '../api';
 
 const AVATARS = ['🎩', '🚗', '🐕', '👢', '🚢', '🎲', '💎', '🏠', '🎵', '⭐'];
+
+interface SavedGame {
+  playerId: string;
+  sessionId: string;
+  playerName: string;
+  avatar: string;
+  sessionName: string;
+}
+
+function getSavedGames(): SavedGame[] {
+  try {
+    return JSON.parse(localStorage.getItem('monopoly_games') || '[]');
+  } catch { return []; }
+}
+
+function saveGame(game: SavedGame) {
+  const games = getSavedGames().filter(g => g.playerId !== game.playerId);
+  games.unshift(game);
+  localStorage.setItem('monopoly_games', JSON.stringify(games));
+}
+
+function removeGame(playerId: string) {
+  const games = getSavedGames().filter(g => g.playerId !== playerId);
+  localStorage.setItem('monopoly_games', JSON.stringify(games));
+}
 
 export default function Home() {
   const navigate = useNavigate();
@@ -14,6 +39,26 @@ export default function Home() {
   const [initialBalance, setInitialBalance] = useState('15000000');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [savedGames, setSavedGames] = useState<SavedGame[]>(getSavedGames());
+
+  // Validate saved games on load (remove finished ones)
+  useEffect(() => {
+    const validate = async () => {
+      const games = getSavedGames();
+      const valid: SavedGame[] = [];
+      for (const game of games) {
+        try {
+          const data = await getPlayer(game.playerId);
+          if (data.player) valid.push(game);
+        } catch {
+          // player no longer exists, skip
+        }
+      }
+      localStorage.setItem('monopoly_games', JSON.stringify(valid));
+      setSavedGames(valid);
+    };
+    validate();
+  }, []);
 
   const handleCreate = async () => {
     if (!name.trim()) { setError('Digite seu nome'); return; }
@@ -23,6 +68,8 @@ export default function Home() {
       const player = await addPlayer(session.id, name, avatar);
       localStorage.setItem('playerId', player.id);
       localStorage.setItem('sessionId', session.id);
+      saveGame({ playerId: player.id, sessionId: session.id, playerName: name, avatar, sessionName: session.name || sessionName || 'Monopoly' });
+      setSavedGames(getSavedGames());
       navigate(`/lobby/${session.id}`);
     } catch { setError('Erro ao criar sessão'); }
     setLoading(false);
@@ -37,6 +84,8 @@ export default function Home() {
       const player = await addPlayer(session.id, name, avatar);
       localStorage.setItem('playerId', player.id);
       localStorage.setItem('sessionId', session.id);
+      saveGame({ playerId: player.id, sessionId: session.id, playerName: name, avatar, sessionName: session.name || 'Monopoly' });
+      setSavedGames(getSavedGames());
       navigate(`/wallet/${player.id}`);
     } catch { setError('Sala não encontrada'); }
     setLoading(false);
@@ -50,6 +99,40 @@ export default function Home() {
           <h1 style={{ fontSize: '1.75rem' }}>Monopoly Bank</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Banco digital para seu jogo</p>
         </div>
+
+        {savedGames.length > 0 && (
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <h3 style={{ marginBottom: '0.75rem' }}>🎮 Jogos em andamento</h3>
+            {savedGames.map(game => (
+              <div key={game.playerId} style={{
+                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)',
+                marginBottom: '0.5rem'
+              }}>
+                <span style={{ fontSize: '1.5rem' }}>{game.avatar}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 'bold' }}>{game.playerName}</div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>{game.sessionName}</div>
+                </div>
+                <button
+                  className="btn-green"
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                  onClick={() => navigate(`/wallet/${game.playerId}`)}
+                >
+                  Entrar
+                </button>
+                <button
+                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '1.2rem' }}
+                  onClick={() => { removeGame(game.playerId); setSavedGames(getSavedGames()); }}
+                  title="Remover"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <button className="btn-primary" onClick={() => setView('create')}>Criar Nova Partida</button>
         <button className="btn-secondary" onClick={() => setView('join')}>Entrar em Partida</button>
       </div>

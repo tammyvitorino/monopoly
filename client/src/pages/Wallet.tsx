@@ -4,6 +4,8 @@ import { getPlayer, getSession } from '../api';
 import { QRCodeSVG } from 'qrcode.react';
 import QRScanner from '../components/QRScanner';
 import BankPay from '../components/BankPay';
+import EndGame from '../components/EndGame';
+import GameOver from '../components/GameOver';
 import { io as socketIO } from 'socket.io-client';
 
 interface PlayerData {
@@ -33,8 +35,11 @@ export default function Wallet() {
   const [showQR, setShowQR] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [showBankPay, setShowBankPay] = useState(false);
+  const [showEndGame, setShowEndGame] = useState(false);
+  const [gameOver, setGameOver] = useState<{ name: string; avatar: string; balance: number } | null | false>(false);
   const [notification, setNotification] = useState('');
   const [sessionCode, setSessionCode] = useState('');
+  const [allPlayers, setAllPlayers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!playerId) return;
@@ -44,6 +49,12 @@ export default function Wallet() {
       setTransactions(data.transactions);
       const sessionData = await getSession(data.player.session_id);
       setSessionCode(sessionData.session.code);
+      setAllPlayers(sessionData.players);
+      // Check if game ended by another player
+      if (sessionData.session.status === 'finished' && gameOver === false) {
+        const winner = sessionData.players.find((p: any) => p.id === sessionData.session.winner_id);
+        setGameOver(winner || null);
+      }
     };
     load();
     const interval = setInterval(load, 3000);
@@ -65,6 +76,10 @@ export default function Wallet() {
   }, [sessionCode]);
 
   if (!player) return <div style={{ textAlign: 'center', padding: '2rem' }}>Carregando...</div>;
+
+  if (gameOver !== false) {
+    return <GameOver winner={gameOver} />;
+  }
 
   const formatMoney = (value: number) => {
     return `M$ ${value.toLocaleString('pt-BR')}`;
@@ -115,6 +130,29 @@ export default function Wallet() {
           📱 Meu QR
         </button>
       </div>
+
+      <button
+        onClick={() => setShowEndGame(true)}
+        style={{
+          width: '100%', padding: '0.75rem', marginBottom: '1rem',
+          background: 'transparent', border: '1px solid var(--danger, #ff6b6b)',
+          color: 'var(--danger, #ff6b6b)', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem'
+        }}
+      >
+        🏁 Finalizar Partida
+      </button>
+
+      {showEndGame && (
+        <EndGame
+          sessionId={player.session_id}
+          players={allPlayers}
+          onClose={() => setShowEndGame(false)}
+          onEnd={(winner) => {
+            setShowEndGame(false);
+            setGameOver(winner);
+          }}
+        />
+      )}
 
       {showBankPay && (
         <BankPay
